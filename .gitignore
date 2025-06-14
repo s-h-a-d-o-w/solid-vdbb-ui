@@ -1,5 +1,6 @@
 dist
 waku
+private
 .wrangler
 .output
 .vercel

@@ -3,7 +3,6 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   vite: {
-    // @ts-expect-error
     plugins: [tailwindcss()],
   },
 });
