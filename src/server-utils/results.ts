@@ -2,7 +2,7 @@
 
 import { readdir, readFile } from "fs/promises";
 import path from "path";
-import type { caseLabels } from "~/utilities/constants";
+import type { caseLabels } from "~/lib/constants";
 
 export interface Metric {
   max_load_count: number;
@@ -170,6 +170,8 @@ export const getAllResults = async (): Promise<Results> => {
     const chartData = processResultsForChart(results);
     const dbNames = [...new Set(chartData.map((d) => d.db_name))];
     const caseIds = [...new Set(chartData.map((d) => d.case_id))];
+
+    // await new Promise((resolve) => setTimeout(resolve, 3000));
 
     return { chartData, dbNames, caseIds };
   } catch (error) {

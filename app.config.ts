@@ -3,6 +3,9 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   vite: {
+    // experimental: {
+    //   enableNativePlugin: true,
+    // },
     plugins: [tailwindcss()],
   },
 });

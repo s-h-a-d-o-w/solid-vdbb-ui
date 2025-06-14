@@ -1,4 +1,4 @@
-import { Component } from "solid-js";
+
 import { Checkbox as KobalteCheckbox } from "@kobalte/core/checkbox";
 
 interface CheckboxProps {
@@ -7,7 +7,7 @@ interface CheckboxProps {
   label: string;
 }
 
-export const Checkbox: Component<CheckboxProps> = (props) => {
+export function Checkbox(props:CheckboxProps) {
   return (
     <KobalteCheckbox
       class="flex items-center mb-2"
@@ -38,4 +38,4 @@ export const Checkbox: Component<CheckboxProps> = (props) => {
       </KobalteCheckbox.Label>
     </KobalteCheckbox>
   );
-};
+}

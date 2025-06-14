@@ -1,9 +1,9 @@
-import { createSignal, createMemo } from "solid-js";
+import { createSignal, createMemo, Show } from "solid-js";
 import { Filters } from "./Filters";
 import { ResultsChart } from "./ResultsChart";
 import type {
   ChartData,
-  Results as ResultsType,
+  Results,
 } from "../server-utils/results";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -22,19 +22,26 @@ export const filterChartData = (
       dateFilter = item.fileDate >= startDate;
     }
 
-    return dbFilter && caseFilter && dateFilter;
+    return dbFilter && dateFilter;
   });
 };
 
-export function Results({ chartData, dbNames, caseIds }: ResultsType) {
+export function Results(props: Partial<Results>) {
   const [filteredData, setFilteredData] = createSignal<ChartData[]>();
   const [currentStartDate, setCurrentStartDate] = createSignal<Date | undefined>();
 
   const fileStats = createMemo(() => {
+    if (!props.chartData) {
+      return {
+        fileCount: 0,
+        filteredFiles: [],
+      };
+    }
+
     const startDate = currentStartDate();
     if (!startDate) {
       const uniqueFilenames = new Set<string>();
-      chartData.forEach((item) => {
+      props.chartData.forEach((item) => {
         if (item.filename) {
           uniqueFilenames.add(item.filename);
         }
@@ -47,7 +54,7 @@ export function Results({ chartData, dbNames, caseIds }: ResultsType) {
 
     const uniqueFilenames = new Set<string>();
 
-    chartData.forEach((item) => {
+    props.chartData.forEach((item) => {
       if (item.fileDate && item.filename && item.fileDate >= startDate) {
         uniqueFilenames.add(item.filename);
       }
@@ -66,8 +73,12 @@ export function Results({ chartData, dbNames, caseIds }: ResultsType) {
   ) => {
     setCurrentStartDate(startDate);
 
+    if (!props.chartData) {
+      return;
+    }
+
     const newData = filterChartData(
-      chartData,
+      props.chartData,
       newSelectedDbs,
       newSelectedCase,
       startDate,
@@ -79,8 +90,8 @@ export function Results({ chartData, dbNames, caseIds }: ResultsType) {
     <div class="flex">
       <div class="print:hidden">
         <Filters
-          dbNames={dbNames}
-          caseIds={caseIds}
+          dbNames={props.dbNames || []}
+          caseIds={props.caseIds || []}
           onFiltersChange={(selectedDbs, selectedCase, startDate) => {
             setTimeout(() => {
               handleFiltersChange(selectedDbs, selectedCase, startDate);
@@ -99,7 +110,9 @@ export function Results({ chartData, dbNames, caseIds }: ResultsType) {
           <code class="dark:border-gray-100 border border-gray-300 dark:border-gray-700 p-1 rounded-md">{`<db_name> (<db_label>?, <index>, <num_concurrency>[])`}</code>
         </p>
 
-        {filteredData() && <ResultsChart data={filteredData()!} />}
+        <Show when={filteredData()}>
+          <ResultsChart data={filteredData()!} />
+        </Show>
       </div>
       <div class="fixed top-4 right-4 z-50">
         <ThemeToggle />

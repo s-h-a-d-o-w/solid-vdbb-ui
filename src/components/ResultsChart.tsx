@@ -1,18 +1,8 @@
-"use client";
-
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { createMemo, For, Show } from "solid-js";
+import { BarChart } from "~/components/ui/charts";
 import type { ChartData } from "../server-utils/results";
-import { metric_order, caseLabels } from "../client-utils/constants";
-import { FilenameTooltip } from "./FilenameTooltip";
+import { metric_order, caseLabels } from "~/lib/constants";
+import type { ChartOptions } from "chart.js";
 
 interface ResultsChartProps {
   data: ChartData[];
@@ -35,18 +25,18 @@ function isLessBetter(metric: string) {
 
 const getColor = (dbName: string) => {
   const predefinedColors = {
-    AWSOpenSearch: "var(--color-orange-400)",
-    ElasticCloud: "var(--color-yellow-400)",
-    LanceDB: "var(--color-green-400)",
-    Milvus: "var(--color-teal-400)",
-    PgVector: "var(--color-primary)",
-    Pinecone: "var(--color-indigo-400)",
-    QdrantCloud: "var(--color-rose-400)",
-    Redis: "var(--color-rose-600)",
-    TiDB: "var(--color-indigo-600)",
-    Vespa: "var(--color-teal-600)", //
-    WeaviateCloud: "var(--color-green-600)", //
-    ZillizCloud: "var(--color-orange-600)",
+    AWSOpenSearch: "#fb923c",
+    ElasticCloud: "#facc15",
+    LanceDB: "#4ade80",
+    Milvus: "#2dd4bf",
+    PgVector: "#3b82f6",
+    Pinecone: "#818cf8",
+    QdrantCloud: "#fb7185",
+    Redis: "#dc2626",
+    TiDB: "#4338ca",
+    Vespa: "#0d9488",
+    WeaviateCloud: "#059669",
+    ZillizCloud: "#ea580c",
   };
 
   if (dbName in predefinedColors) {
@@ -56,169 +46,156 @@ const getColor = (dbName: string) => {
   return "#000000";
 };
 
-function Tick({
-  tickProps,
-  dy,
-  textAnchor,
-}: {
-  tickProps: any;
-  dy: number;
-  textAnchor: string;
-}) {
-  const { x, y, payload } = tickProps;
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <text
-        x={0}
-        y={0}
-        dy={dy}
-        textAnchor={textAnchor}
-        fill="currentColor"
-        className="text-xs"
-      >
-        {payload.value}
-      </text>
-    </g>
-  );
-}
-
-export const ResultsChart = ({ data }: ResultsChartProps) => {
-  if (!data.length) {
-    return <div className="text-center py-4">No data available</div>;
-  }
-
-  // Get available metrics from the data
-  const availableMetrics = new Set<string>();
-  data.forEach((item) => {
-    item.metricsSet?.forEach((metric) => {
-      if (metric_order.includes(metric)) {
-        availableMetrics.add(metric);
-      }
+export function ResultsChart(props: ResultsChartProps) {
+  const availableMetrics = createMemo(() => {
+    const metrics = new Set<string>();
+    props.data.forEach((item) => {
+      item.metricsSet?.forEach((metric) => {
+        if (metric_order.includes(metric)) {
+          metrics.add(metric);
+        }
+      });
     });
+    return metric_order.filter((metric) => metrics.has(metric));
   });
 
-  const metrics = metric_order.filter((metric) => availableMetrics.has(metric));
-
-  // Group data by case name
-  const dataByCase = data.reduce(
-    (acc, item) => {
-      if (!acc[item.case_id]) {
-        acc[item.case_id] = [];
-      }
-      acc[item.case_id]!.push(item);
-      return acc;
-    },
-    {} as Record<keyof typeof caseLabels, ChartData[]>,
-  );
+  const dataByCase = createMemo(() => {
+    return props.data.reduce(
+      (acc, item) => {
+        if (!acc[item.case_id]) {
+          acc[item.case_id] = [];
+        }
+        acc[item.case_id]!.push(item);
+        return acc;
+      },
+      {} as Record<keyof typeof caseLabels, ChartData[]>,
+    );
+  });
 
   return (
-    <div>
-      {Object.entries(dataByCase).map(([caseId, caseData]) => (
-        <div key={caseId} className="mb-8">
-          <h3 className="text-lg font-semibold mb-2">
-            {caseLabels[parseInt(caseId, 10) as keyof typeof caseLabels]}
-          </h3>
+    <Show when={props.data.length > 0} fallback={<div class="text-center py-4">No data available</div>}>
+      <div>
+        <For each={Object.entries(dataByCase())}>
+          {([caseId, caseData]) => (
+            <div class="mb-8">
+              <h3 class="text-lg font-semibold mb-2">
+                {caseLabels[parseInt(caseId, 10) as keyof typeof caseLabels]}
+              </h3>
 
-          {metrics.map((metric) => {
-            const filteredData = caseData.filter(
-              (item) =>
-                item.metricsSet?.includes(metric) &&
-                typeof item[metric as keyof ChartData] === "number" &&
-                (item[metric as keyof ChartData] as number) > 1e-7,
-            );
+              <For each={availableMetrics()}>
+                {(metric) => {
+                  const filteredData = createMemo(() =>
+                    caseData.filter(
+                      (item) =>
+                        item.metricsSet?.includes(metric) &&
+                        typeof item[metric as keyof ChartData] === "number" &&
+                        (item[metric as keyof ChartData] as number) > 1e-7,
+                    )
+                  );
 
-            if (!filteredData.length) return null;
+                  const sortedData = createMemo(() => {
+                    const data = [...filteredData()];
+                    return data.sort((a, b) => {
+                      if (isLessBetter(metric)) {
+                        return (
+                          (a[metric as keyof ChartData] as number) -
+                          (b[metric as keyof ChartData] as number)
+                        );
+                      }
+                      return (
+                        (b[metric as keyof ChartData] as number) -
+                        (a[metric as keyof ChartData] as number)
+                      );
+                    });
+                  });
 
-            const sortedData = [...filteredData].sort((a, b) => {
-              if (isLessBetter(metric)) {
-                return (
-                  (a[metric as keyof ChartData] as number) -
-                  (b[metric as keyof ChartData] as number)
-                );
-              }
-              return (
-                (b[metric as keyof ChartData] as number) -
-                (a[metric as keyof ChartData] as number)
-              );
-            });
+                  const chartData = createMemo(() => ({
+                    labels: sortedData().map(item => item.db_label),
+                    datasets: [{
+                      label: `${metric.replace("_", " ")} (${metric_unit_map[metric] || ""})`,
+                      data: sortedData().map(item => item[metric as keyof ChartData] as number),
+                      backgroundColor: sortedData().map(item => getColor(item.db_name)),
+                      borderColor: sortedData().map(item => getColor(item.db_name)),
+                      borderWidth: 1,
+                    }]
+                  }));
 
-            const unit = metric_unit_map[metric] || "";
-            const height =
-              sortedData.length * BAR_HEIGHT + AXIS_HEIGHT_AND_PADDING;
-
-            return (
-              <div key={metric} className="mb-6 print:break-inside-avoid">
-                <h4 className="text-md font-medium mb-1">
-                  {[
-                    metric[0]!.toLocaleUpperCase(),
-                    metric.slice(1).toLocaleLowerCase().replaceAll("_", " "),
-                  ].join("")}
-                  {!["qps", "recall"].includes(metric) && ` in ${unit}`}
-                  <span className="text-xs text-gray-500 ml-1 dark:text-gray-300">
-                    ({isLessBetter(metric) ? "less" : "more"} is better)
-                  </span>
-                </h4>
-
-                <div style={{ height: `${height}px` }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      layout="vertical"
-                      data={sortedData}
-                      margin={{ bottom: 10, left: 50, right: 75 }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        horizontalPoints={Array.from(
-                          {
-                            length: Math.ceil(
-                              (height - AXIS_HEIGHT_AND_PADDING) / 100,
-                            ),
+                  const chartOptions = createMemo(() => ({
+                    animation: false,
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        display: false,
+                      },
+                      tooltip: {
+                        callbacks: {
+                          title: (context: any) => {
+                            const dataIndex = context[0]?.dataIndex;
+                            return sortedData()[dataIndex]?.db_label || '';
                           },
-                          (_, i) => i * 100,
-                        )}
-                      />
-                      <XAxis
-                        type="number"
-                        tick={(props) => (
-                          <Tick dy={16} textAnchor="middle" tickProps={props} />
-                        )}
-                      />
-                      <YAxis
-                        allowDuplicatedCategory
-                        type="category"
-                        dataKey="db_label"
-                        width={240}
-                        tickCount={sortedData.length}
-                        tick={(props) => (
-                          <Tick dy={4} textAnchor="end" tickProps={props} />
-                        )}
-                      />
-                      <Tooltip content={<FilenameTooltip />} />
-                      <Bar
-                        dataKey={metric}
-                        name={`${metric.replace("_", " ")} (${unit})`}
-                        label={{
-                          position: "right",
-                          formatter: (entry: any) => entry,
-                          className: "text-xs fill-black dark:fill-white",
-                        }}
-                        isAnimationActive={false}
-                      >
-                        {sortedData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={getColor(entry.db_name)}
+                          label: (context: any) => {
+                            const dataIndex = context.dataIndex;
+                            const item = sortedData()[dataIndex];
+                            const unit = metric_unit_map[metric] || "";
+                            return [
+                              `${metric.replace("_", " ")}: ${context.parsed.x}${unit}`,
+                              item?.filename ? `File: ${item.filename}` : ''
+                            ].filter(Boolean);
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        beginAtZero: true,
+                        grid: {
+                          display: true,
+                          color: "rgba(0, 0, 0, 0.1)"
+                        }
+                      },
+                      y: {
+                        grid: {
+                          display: false
+                        }
+                      }
+                    }
+                  } satisfies ChartOptions));
+
+                  const unit = metric_unit_map[metric] || "";
+                  const height = sortedData().length * BAR_HEIGHT + AXIS_HEIGHT_AND_PADDING;
+
+                  return (
+                    <Show when={filteredData().length > 0}>
+                      <div class="mb-6 print:break-inside-avoid">
+                        <h4 class="text-md font-medium mb-1">
+                          {[
+                            metric[0]!.toLocaleUpperCase(),
+                            metric.slice(1).toLocaleLowerCase().replaceAll("_", " "),
+                          ].join("")}
+                          {!["qps", "recall"].includes(metric) && ` in ${unit}`}
+                          <span class="text-xs text-gray-500 ml-1 dark:text-gray-300">
+                            ({isLessBetter(metric) ? "less" : "more"} is better)
+                          </span>
+                        </h4>
+
+                        <div style={{ height: `${height}px` }}>
+                          <BarChart
+                            data={chartData()}
+                            options={chartOptions()}
+                            height={height}
                           />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ))}
-    </div>
+                        </div>
+                      </div>
+                    </Show>
+                  );
+                }}
+              </For>
+            </div>
+          )}
+        </For>
+      </div>
+    </Show>
   );
-};
+}

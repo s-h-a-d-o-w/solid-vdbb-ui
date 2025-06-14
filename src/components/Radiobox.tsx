@@ -1,4 +1,3 @@
-import { Component } from "solid-js";
 import { RadioGroup } from "@kobalte/core/radio-group";
 
 interface RadioboxProps {
@@ -6,7 +5,7 @@ interface RadioboxProps {
   value: string;
 }
 
-export const Radiobox: Component<RadioboxProps> = (props) => {
+export function Radiobox(props: RadioboxProps) {
   return (
     <RadioGroup.Item
       class="flex items-center mb-2"
