@@ -1,6 +1,8 @@
 {
-  "name": "example-basic",
+  "name": "solid-vdbb-ui",
   "type": "module",
+  "version": "0.0.1",
+  "private": true,
   "scripts": {
     "dev": "ts scripts/run.ts",
     "build": "vinxi build",

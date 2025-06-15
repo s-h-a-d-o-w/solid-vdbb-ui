@@ -1,32 +1,19 @@
-# SolidStart
+# solid-vdbb-ui
 
-Everything you need to build a Solid project, powered by [`solid-start`](https://start.solidjs.com);
+A solidjs version of [vdbb-ui](https://github.com/s-h-a-d-o-w/vdbb-ui). The styles don't quite match because this was a quick experiment regarding performance and look and feel of solid.
 
-## Creating a project
+And at least here, solid performs a bit worse. I repeated recording the profile a few times and the difference was pretty consistent.
 
-```bash
-# create a new project in the current directory
-npm init solid@latest
+## Performance comparison
 
-# create a new project in my-app
-npm init solid@latest my-app
-```
+### React
 
-## Developing
+![vdbb-ui](./assets/vdbb-react.png)
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+### Solid
 
-```bash
-npm run dev
+![solid-vdbb-ui](./assets/vdbb-solid.png)
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+What's probably noteworthy is that it looks like React schedules work in a more granular/aggressive manner, which leads to more idle time in the solid version. And for some reason, in the React version, the final paint completes right after the work is done; while with solid, it only happens after a bit of idle time. (Yes, I did not make a mistake when drawing the range in the solid performance profile. It starts at the beginning of the click, and ends when rendering is done.)
 
-## Building
-
-Solid apps are built with _presets_, which optimise your project for deployment to different environments.
-
-By default, `npm run build` will generate a Node app that you can run with `npm start`. To use a different preset, add it to the `devDependencies` in `package.json` and specify in your `app.config.js`.
-
-## This project was created with the [Solid CLI](https://github.com/solidjs-community/solid-cli)
+There are of course also the partial frames in the React version that actually do render preliminary charts without the final styles. If this was a commercial project, this would actually be a downside because it causes significant layout shift.
