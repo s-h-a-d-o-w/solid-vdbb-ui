@@ -6,6 +6,8 @@ And at least here, solid performs a bit worse. I repeated recording the profile 
 
 ## Performance comparison
 
+These profiles were recorded using production bundles, with the set of results that is committed in https://github.com/zilliztech/VectorDBBench and with the case filter disabled, so that all charts render.
+
 ### React
 
 ![vdbb-ui](./assets/vdbb-react.png)
