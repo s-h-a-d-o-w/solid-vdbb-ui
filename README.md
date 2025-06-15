@@ -16,6 +16,8 @@ These profiles were recorded using production bundles, with the set of results t
 
 ![solid-vdbb-ui](./assets/vdbb-solid.png)
 
-What's probably noteworthy is that it looks like React schedules work in a more granular/aggressive manner, which leads to more idle time in the solid version. And for some reason, in the React version, the final paint completes right after the work is done; while with solid, it only happens after a bit of idle time. (Yes, I did not make a mistake when drawing the range in the solid performance profile. It starts at the beginning of the click, and ends when rendering is done.)
+What's probably noteworthy is that it looks like React schedules work in a more granular/aggressive manner, which leads to more idle time in the solid version. (Although, I can't rule out that maybe it's the SolidUI ChartJS wrapper that's less efficient than react-chartjs-2. Investigating that would mean time investment that I can't justify at this point.)
 
-There are of course also the partial frames in the React version that actually do render preliminary charts without the final styles. If this was a commercial project, this would actually be a downside because it causes significant layout shift.
+For some reason, in the React version, the final paint completes right after the work is done; while with solid, it only happens after a bit of idle time. (Yes, I did not make a mistake when drawing the range in the solid performance profile. It starts at the beginning of the click, and ends when rendering is done.)
+
+There are of course also the partial frames in the React version that actually do render preliminary charts without the final styles. If this was a commercial project, this would be a downside because it causes significant layout shift.
